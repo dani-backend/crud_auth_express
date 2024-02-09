@@ -4,6 +4,7 @@ const prisma = new PrismaClient();
 
 const addBookController = async (req, res) => {
   try {
+    // ambil data dari req.body
     const { title, author, price } = req.body;
 
     // validasi: pastikan title, author, dan price tidak kosong
@@ -40,6 +41,7 @@ const addBookController = async (req, res) => {
 
 const getBookController = async (req, res) => {
   try {
+    // ambil semua data buku
     const books = await prisma.book.findMany();
 
     // validasi: jika buku tidak ada
@@ -100,6 +102,7 @@ const getBookByIdController = async (req, res) => {
       book,
     });
   } catch (error) {
+    // berikan response error
     return res.status(500).json({
       status: "error",
       message: error.message,
