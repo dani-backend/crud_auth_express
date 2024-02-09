@@ -65,4 +65,46 @@ const getBookController = async (req, res) => {
   }
 };
 
-export { addBookController, getBookController };
+const getBookByIdController = async (req, res) => {
+  try {
+    // ambil id dari req.params
+    const id = parseInt(req.params.id);
+
+    // validasi: pastikan client mengirimkan id
+    if (!id) {
+      return res.status(400).json({
+        status: "error",
+        message: "Id buku tidak boleh kosong",
+      });
+    }
+
+    // cek id buku di database
+    const book = await prisma.book.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    //validasi: jika buku tidak ada
+    if (!book) {
+      return res.status(404).json({
+        status: "error",
+        message: "Data buku tidak ada",
+      });
+    }
+
+    // berikan response success
+    return res.json({
+      status: "success",
+      message: "Berhasil mendapatkan data buku",
+      book,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+export { addBookController, getBookController, getBookByIdController };
