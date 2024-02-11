@@ -91,7 +91,7 @@ const getBookByIdController = async (req, res) => {
     if (!book) {
       return res.status(404).json({
         status: "error",
-        message: "Data buku tidak ada",
+        message: "Data buku tidak ditemukan",
       });
     }
 
@@ -110,4 +110,114 @@ const getBookByIdController = async (req, res) => {
   }
 };
 
-export { addBookController, getBookController, getBookByIdController };
+const updateBookByIdController = async (req, res) => {
+  try {
+    // ambil id dari req.params
+    const id = parseInt(req.params.id);
+
+    // validasi jika client tidak mengirimkan id
+    if (!id) {
+      return res.status(400).json({
+        status: "error",
+        message: "Id buku tidak boleh kosong",
+      });
+    }
+
+    // cek di database
+    const book = await prisma.book.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    // validasi: jika data buku tidak ada
+    if (!book) {
+      return res.status(404).json({
+        status: "error",
+        message: "Data buku tidak ditemukan",
+      });
+    }
+
+    // ambil data dari req.body
+    const { title, author, price } = req.body;
+
+    const updatedBook = await prisma.book.update({
+      where: {
+        id,
+      },
+      data: {
+        title: title ? title : book.title,
+        author: author ? author : book.author,
+        price: price ? price : book.price,
+      },
+    });
+
+    return res.json({
+      status: "success",
+      message: "Berhasil mengupdate buku",
+      bookId: updatedBook.id,
+    });
+  } catch (error) {
+    // berikan response error
+    return res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+const deleteBookByIdController = async (req, res) => {
+  try {
+    // ambil id dari req.params
+    const id = parseInt(req.params.id);
+
+    // validasi: jika tidak mengirimkan id
+    if (!id) {
+      return res.status(400).json({
+        status: "error",
+        message: "Id buku tidak boleh kosong",
+      });
+    }
+
+    // cek id di db
+    const book = await prisma.book.findUnique({
+      where: {
+        id,
+      },
+    });
+
+    // validasi: jika data buku tidak ada
+    if (!book) {
+      return res.status(404).json({
+        status: "error",
+        message: "Buku tidak ditemukan",
+      });
+    }
+
+    // proses hapus buku
+    const deletedBook = await prisma.book.delete({
+      where: {
+        id,
+      },
+    });
+
+    return res.json({
+      status: "error",
+      message: "Berhasil menghapus buku",
+      bookId: deletedBook.id,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+export {
+  addBookController,
+  getBookController,
+  getBookByIdController,
+  updateBookByIdController,
+  deleteBookByIdController,
+};
