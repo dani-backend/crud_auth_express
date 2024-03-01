@@ -1,41 +1,80 @@
-import { createClient } from "@supabase/supabase-js";
+import jwt from "jsonwebtoken";
+import bcrypt, { hash } from "bcrypt";
+import validator from "validator";
+import { PrismaClient } from "@prisma/client";
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabseKey = process.env.SUPABASE_KEY;
-const supabase = createClient(supabaseUrl, supabseKey);
+const prisma = new PrismaClient();
 
 const register = async (req, res) => {
   try {
-    // ambil data req.body
-    const { email, password } = req.body;
+    // ambil data dari client
+    const { email, password, confPassword } = req.body;
 
-    // validasi: jika data kurang
-    if (!email || !password) {
+    // validasi: jika user kurang mengirimkan data
+    if (!email || !password || !confPassword) {
       return res.status(400).json({
         status: "error",
-        message: "data email dan password harus diisi",
+        message: "Data email, password, dan confirm password harus diisi",
       });
     }
 
-    // proses register
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
+    // validasi: jika email tidak valid
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({
+        status: "error",
+        message: "Email tidak valid",
+      });
+    }
+
+    // validasi: jika password dan confPassword tidak sama
+    if (password !== confPassword) {
+      return res.status(400).json({
+        status: "error",
+        message: "Password harus sama",
+      });
+    }
+
+    // cek apakah user sudah ada yang daftar
+    const existingUser = await prisma.user.findUnique({
+      where: {
+        email,
+      },
     });
 
-    //validasi: jika error
-    if (error) {
+    // validasi: jika user sudah ada
+    if (existingUser) {
       return res.status(400).json({
         status: "error",
-        message: error.message,
+        message: "User sudah ada",
       });
     }
 
-    // response success
+    // enkripsi password
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    // buat object user
+    const newUser = {
+      email,
+      password: hashPassword,
+    };
+
+    // tambahkan data ke db
+    const user = await prisma.user.create({
+      data: newUser,
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        status: "error",
+        message: "Gagal mendaftar",
+      });
+    }
+
+    // berikan response success
     return res.status(201).json({
       status: "success",
-      message: "Berhasil registrasi",
-      data,
+      message: "Berhasil mendaftar",
+      email: user.email,
     });
   } catch (error) {
     return res.status(500).json({
@@ -45,62 +84,4 @@ const register = async (req, res) => {
   }
 };
 
-const login = async (req, res) => {
-  try {
-    // ambil data req.body
-    const { email, password } = req.body;
-
-    // validasi: jika data kurang
-    if (!email || !password) {
-      return res.status(400).json({
-        status: "error",
-        message: "data email dan password harus diisi",
-      });
-    }
-
-    // proses login
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    //validasi: jika error
-    if (error) {
-      return res.status(401).json({
-        status: "error",
-        message: error.message,
-      });
-    }
-
-    // response success
-    return res.status(200).json({
-      status: "success",
-      message: "Berhasil login",
-      data,
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: "error",
-      message: error.message,
-    });
-  }
-};
-
-const logout = async (req, res) => {
-  try {
-    const { error } = await supabase.auth.signOut();
-
-    if (error) {
-      return res.status(500).json({ status: "error", message: error.message });
-    }
-
-    return res.status(200).json({
-      status: "success",
-      message: "Berhasil Logout",
-    });
-  } catch (error) {
-    return res.status(500).json({ status: "error", message: error.message });
-  }
-};
-
-export { register, login, logout };
+export { register };
