@@ -1,49 +1,55 @@
 import jwt from "jsonwebtoken";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 export const verifyToken = (req, res, next) => {
   try {
-    // ambil data dari headers
+    // Ambil data dari headers
     const auth = req.headers["authorization"];
 
-    // validasi: jika auth dan token tidak ada
+    // Validasi: jika auth atau token tidak ada
     if (!auth || !auth.split(" ")[1]) {
       return res.status(400).json({
-        status: "error",
-        message: "Data token tidak ada",
-      });
-    }
-
-    // ambil token
-    const token = auth.split(" ")[1];
-
-    // // verifikasi token
-    // jwt.verify(token, process.env.ACCESS_TOKEN_KEY, (error, decoded) => {
-    //   // validasi: jika token tidak valid
-    //   if (error) {
-    //     return res.status(403).json({
-    //       status: "error",
-    //       message: error.message,
-    //     });
-    //   }
-
-    //   console.log("decoded.email : " + decoded.email);
-    //   next();
-    // });
-
-    // verifikasi token
-    const verifyToken = jwt.verify(token, process.env.ACCESS_TOKEN_KEY);
-
-    // validasi: jika token tidak valid
-    if (!verifyToken) {
-      return res.status(403).json({
         status: "error",
         message: "Token tidak valid",
       });
     }
 
-    console.log("email : " + verifyToken.email);
+    // Ambil token
+    const token = auth.split(" ")[1];
 
-    next();
+    // Verifikasi token dengan callback async
+    jwt.verify(token, process.env.ACCESS_TOKEN_KEY, async (error, decoded) => {
+      // Validasi: jika token tidak valid
+      if (error) {
+        return res.status(401).json({
+          status: "error",
+          message: error.message,
+        });
+      }
+
+      // Cek user berdasarkan token di database
+      const user = await prisma.user.findFirst({
+        where: {
+          accessToken: token,
+        },
+      });
+
+      // Validasi: jika user tidak ada
+      if (!user) {
+        return res.status(401).json({
+          status: "error",
+          message: "Unauthorized",
+        });
+      }
+
+      // kirimkan user
+      req.user = user;
+
+      // Jika semua validasi berhasil, lanjutkan ke middleware atau endpoint berikutnya
+      next();
+    });
   } catch (error) {
     return res.status(500).json({
       status: "error",

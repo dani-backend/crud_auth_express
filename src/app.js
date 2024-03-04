@@ -1,5 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
+import cookieParser from "cookie-parser";
 import bookRoute from "./routes/bookRoute.js";
 import authRoute from "./routes/authRoute.js";
 
@@ -11,6 +12,7 @@ const port = process.env.PORT;
 
 // middleware
 app.use(express.json()); // baca data dari req.body
+app.use(cookieParser());
 app.use("/api", bookRoute);
 app.use("/api", authRoute);
 

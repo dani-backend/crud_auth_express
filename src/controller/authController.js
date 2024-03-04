@@ -127,9 +127,19 @@ const login = async (req, res) => {
       expiresIn: "30s",
     });
 
-    // simpan access token di cookie
+    // simpan access token di db
+    await prisma.user.update({
+      where: {
+        email,
+      },
+      data: {
+        accessToken,
+      },
+    });
+
+    // kirim access token lewat cookie
     res.cookie("accessToken", accessToken, {
-      maxAge: 24 * 60 * 60 * 1000,
+      maxAge: 30 * 1000, // 30s dalam milidetik
       httpOnly: true,
     });
 
@@ -146,4 +156,38 @@ const login = async (req, res) => {
   }
 };
 
-export { register, login };
+const logout = async (req, res) => {
+  try {
+    // cek accessToken cookie
+    const accessToken = req.cookies.accessToken;
+
+    // validasi: jika cookie ada
+    if (accessToken) {
+      // hapus cookie
+      res.clearCookie("accessToken");
+    }
+
+    // update accessToken di db
+    await prisma.user.update({
+      where: {
+        email: req.user.email,
+      },
+      data: {
+        accessToken: null,
+      },
+    });
+
+    // berikan response success
+    return res.json({
+      status: "success",
+      message: "Berhasil keluar",
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
+export { register, login, logout };

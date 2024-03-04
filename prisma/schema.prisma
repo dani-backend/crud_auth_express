@@ -11,8 +11,9 @@ datasource db {
 }
 
 model User {
-  email    String @id
-  password String
+  email       String  @id
+  password    String
+  accessToken String?
 }
 
 model Book {
