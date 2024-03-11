@@ -1,11 +1,15 @@
 import { PrismaClient } from "@prisma/client";
+import { uploadFileToSupabase } from "../utils/uploadFileToSupabase.js";
+import supabase from "../config/supabaseConfig.js";
 
 const prisma = new PrismaClient();
 
 const addBookController = async (req, res) => {
   try {
     // ambil data dari req.body
-    const { title, author, price } = req.body;
+    const { title, author } = req.body;
+    const price = parseFloat(req.body.price);
+    let cover = "";
 
     // validasi: pastikan title, author, dan price tidak kosong
     if (!title || !author || !price) {
@@ -15,12 +19,29 @@ const addBookController = async (req, res) => {
       });
     }
 
+    // validasi: jika ada file
+    if (req.file) {
+      // ambil file buffer
+      const fileBuffer = req.file.buffer;
+
+      // buat path
+      const timestamp = new Date().getTime();
+      const path = `/book/${timestamp}-${req.file.originalname}`;
+
+      // proses upload file
+      const fileUrl = await uploadFileToSupabase(path, fileBuffer);
+
+      // isi variabel cover dengan url
+      cover = fileUrl;
+    }
+
     // simpan data ke database
     const book = await prisma.book.create({
       data: {
         title,
         author,
         price,
+        cover: cover || null,
       },
     });
 
@@ -214,10 +235,30 @@ const deleteBookByIdController = async (req, res) => {
   }
 };
 
+const getUrlImages = async (req, res) => {
+  try {
+    const { data } = supabase.storage
+      .from("images")
+      .getPublicUrl("book/1710138105884-jadwal penelitian.png", {
+        // download: true,
+      });
+
+    return res.json({
+      data,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: "error",
+      message: error.message,
+    });
+  }
+};
+
 export {
   addBookController,
   getBookController,
   getBookByIdController,
   updateBookByIdController,
   deleteBookByIdController,
+  getUrlImages,
 };

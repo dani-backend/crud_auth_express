@@ -12,6 +12,7 @@ const port = process.env.PORT;
 
 // middleware
 app.use(express.json()); // baca data dari req.body
+app.use(express.urlencoded({ extended: false })); // Tambahkan ini untuk meng-handle form-data
 app.use(cookieParser());
 app.use("/api", bookRoute);
 app.use("/api", authRoute);
